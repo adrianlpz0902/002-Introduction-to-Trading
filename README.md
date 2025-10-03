@@ -3,8 +3,7 @@ Trading Strategy Project 002
 
 A systematic algorithmic trading strategy implementation with multi-indicator signal confirmation, optimized for maximizing the Calmar Ratio.
 
-
-📊 Project Overview
+ Project Overview
 This project implements a multi-indicator technical trading strategy for BTC/USDT with the following key features:
 
 3 Technical Indicators with 2-of-3 signal confirmation
@@ -16,11 +15,11 @@ Comprehensive Performance Metrics and visualizations
 
 Primary Objective: Maximize Calmar Ratio
 
-🎯 Key Results
+ Key Results
 <!-- Update these after running your strategy -->
 MetricTrainingTestValidationCalmar RatioTBDTBDTBDSharpe RatioTBDTBDTBDSortino RatioTBDTBDTBDMax DrawdownTBDTBDTBDWin RateTBDTBDTBD
 
-🏗️ Architecture
+ Architecture
 Modular Design
 The project follows a modular architecture with clear separation of concerns:
 project_002/
@@ -63,7 +62,7 @@ Data Flow
           ↓
 8. Final Evaluation & Visualization
 
-🔧 Installation
+ Installation
 Prerequisites
 
 Python 3.8+
@@ -100,7 +99,7 @@ scipy>=1.9.0
 plotly>=5.11.0
 jupyter>=1.0.0
 
-🚀 Usage
+ Usage
 Quick Start
 Run the complete pipeline:
 bashpython main.py
@@ -154,7 +153,7 @@ OPTIMIZATION = {
     'objective': 'calmar_ratio'
 }
 
-📈 Strategy Description
+Strategy Description
 Technical Indicators
 
 RSI (Relative Strength Index)
@@ -191,7 +190,7 @@ Exit: Opposite signal or stop-loss/take-profit triggers
 Transaction fees: 0.125% applied on entry and exit
 
 
-🎓 Methodology
+ Methodology
 Dataset Split
 
 Training (60%): Used for hyperparameter optimization
@@ -218,7 +217,7 @@ Bollinger period: [15, 25]
 
 Objective Function: Maximize Calmar Ratio on training data
 
-📊 Results & Analysis
+ Results & Analysis
 Performance Summary
 <!-- Add your results here after running -->
 Best Strategy Performance (Validation Set):
@@ -254,13 +253,13 @@ Works best in: TBD
 Struggles during: TBD
 
 
-🧪 Testing
+ Testing
 Run unit tests:
 bashpytest tests/
 Run specific test module:
 bashpytest tests/test_backtest.py -v
 
-📝 Module Documentation
+Module Documentation
 1. data_loader.py
 Handles data loading, cleaning, and train/test/validation splitting.
 Key Functions:
@@ -323,9 +322,8 @@ plot_returns()
 plot_drawdown()
 create_returns_tables() - Monthly/Quarterly/Annual
 
-
-🤝 Contributing
-This is an academic project. All team members must:
+ Contributing
+This is an academic project.The developer of this projetct must:
 
 Understand every line of code
 Be able to explain implementation choices
