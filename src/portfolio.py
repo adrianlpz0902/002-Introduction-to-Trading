@@ -57,7 +57,13 @@ class Portfolio:
         else:
             position_value = 0
 
-        return self.cash + position_value
+        total_value = self.cash + position_value
+
+        # Safety warning: check if portfolio is critically low
+        if total_value < self.initial_cash * 0.20:
+            print(f"⚠️  WARNING: Portfolio value (${total_value:.2f}) is below 20% of initial capital (${self.initial_cash:.2f})")
+
+        return total_value
 
     def open_long(self, price: float, size: Optional[float] = None) -> bool:
         """
@@ -94,13 +100,14 @@ class Portfolio:
 
         return True
 
-    def open_short(self, price: float, size: Optional[float] = None) -> bool:
+    def open_short(self, price: float, size: Optional[float] = None, max_size_pct: float = 0.50) -> bool:
         """
-        Open a short position.
+        Open a short position with conservative sizing.
 
         Args:
             price: Entry price
-            size: Position size in cash (if None, uses all available cash)
+            size: Position size in cash (if None, uses percentage of available cash)
+            max_size_pct: Maximum percentage of cash to use (default: 0.50 = 50%)
 
         Returns:
             True if position opened successfully, False otherwise
@@ -109,7 +116,11 @@ class Portfolio:
             return False  # Already in a position
 
         if size is None:
-            size = self.cash
+            # Conservative sizing for shorts - use only max_size_pct of cash
+            size = self.cash * max_size_pct
+        else:
+            # Limit size to max_size_pct of cash to prevent catastrophic losses
+            size = min(size, self.cash * max_size_pct)
 
         # Calculate transaction cost
         fee = size * self.transaction_fee
@@ -119,14 +130,16 @@ class Portfolio:
             return False
 
         # Calculate number of units (negative for short)
-        units = available_after_fee / price
+        # CRITICAL: Limit units to prevent portfolio from going negative
+        max_safe_units = (self.cash * max_size_pct) / price
+        units = min(available_after_fee / price, max_safe_units)
 
         # Update portfolio
         # Short: we receive cash from selling borrowed units
         self.position = -units
         self.entry_price = price
         self.position_type = 'short'
-        self.cash += available_after_fee  # We receive the sale proceeds
+        self.cash += (units * price - fee)  # We receive the sale proceeds minus fee
 
         return True
 

@@ -153,7 +153,13 @@ def plot_monthly_returns_heatmap(
     # Set timestamp as index if not already
     df = history_df.copy()
     if df.index.name != 'timestamp':
-        df = df.set_index('timestamp')
+        # Try to convert timestamp to datetime
+        try:
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            df = df.set_index('timestamp')
+        except:
+            print("Warning: Could not convert timestamp to datetime. Skipping monthly returns heatmap.")
+            return
 
     # Calculate daily returns
     df['returns'] = df['portfolio_value'].pct_change()

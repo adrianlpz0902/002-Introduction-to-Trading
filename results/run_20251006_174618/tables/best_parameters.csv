@@ -1,0 +1,2 @@
+rsi_period,rsi_oversold,rsi_overbought,macd_fast,macd_slow,macd_signal,bb_period,bb_std,stop_loss,take_profit,min_confirmations
+23,21,67,11,24,11,15,2.3468443628405904,0.045927123233730105,0.07677083465555973,2

@@ -10,6 +10,32 @@ from typing import Dict, Tuple, Optional
 from .portfolio import Portfolio
 
 
+def calculate_position_size(
+    portfolio: Portfolio,
+    position_type: str,
+    long_pct: float = 0.95,
+    short_pct: float = 0.50
+) -> float:
+    """
+    Calculate dynamic position size based on available cash and position type.
+
+    Args:
+        portfolio: Portfolio object
+        position_type: 'long' or 'short'
+        long_pct: Percentage of cash to use for long positions (default: 0.95)
+        short_pct: Percentage of cash to use for short positions (default: 0.50)
+
+    Returns:
+        Position size in cash
+    """
+    if position_type == 'long':
+        return portfolio.cash * long_pct
+    elif position_type == 'short':
+        return portfolio.cash * short_pct
+    else:
+        return 0.0
+
+
 def run_backtest(
     df: pd.DataFrame,
     initial_cash: float = 10000.0,
@@ -17,7 +43,11 @@ def run_backtest(
     stop_loss: Optional[float] = None,
     take_profit: Optional[float] = None,
     position_size: Optional[float] = None,
-    price_col: str = 'close'
+    price_col: str = 'close',
+    long_position_size_pct: float = 0.95,
+    short_position_size_pct: float = 0.50,
+    max_drawdown_threshold: float = 0.30,
+    short_stop_loss_multiplier: float = 0.75
 ) -> Tuple[Portfolio, pd.DataFrame]:
     """
     Run backtesting simulation on data with signals.
@@ -28,8 +58,12 @@ def run_backtest(
         transaction_fee: Fee as decimal (default: 0.00125 = 0.125%)
         stop_loss: Stop loss percentage (e.g., 0.02 = 2%)
         take_profit: Take profit percentage (e.g., 0.03 = 3%)
-        position_size: Fixed position size (if None, uses all cash)
+        position_size: Fixed position size (DEPRECATED - use dynamic sizing instead)
         price_col: Column name for price data
+        long_position_size_pct: Percentage of cash for long positions (default: 0.95)
+        short_position_size_pct: Percentage of cash for short positions (default: 0.50)
+        max_drawdown_threshold: Circuit breaker threshold (default: 0.30 = 30%)
+        short_stop_loss_multiplier: Tighter stop-loss for shorts (default: 0.75)
 
     Returns:
         Tuple of (Portfolio object, DataFrame with returns)
@@ -44,36 +78,76 @@ def run_backtest(
             raise ValueError(f"DataFrame must contain '{col}' column")
 
     # Get timestamp column if exists
-    timestamp_cols = ['timestamp', 'date', 'datetime', 'time']
+    timestamp_cols = ['timestamp', 'date', 'datetime', 'time', 'Date']
     timestamp_col = None
     for col in timestamp_cols:
         if col in df.columns:
             timestamp_col = col
             break
 
+    # Track peak portfolio value for circuit breaker
+    peak_value = initial_cash
+    circuit_breaker_triggered = False
+
     # Simulate trading
     for idx, row in df.iterrows():
         price = row[price_col]
         timestamp = row[timestamp_col] if timestamp_col else idx
 
+        current_value = portfolio.get_portfolio_value(price)
+
+        # Update peak value
+        if current_value > peak_value:
+            peak_value = current_value
+
+        # CIRCUIT BREAKER: Stop trading if drawdown exceeds threshold
+        current_drawdown = (peak_value - current_value) / peak_value if peak_value > 0 else 0
+        if current_drawdown >= max_drawdown_threshold and not circuit_breaker_triggered:
+            circuit_breaker_triggered = True
+            print(f"🛑 CIRCUIT BREAKER TRIGGERED: Drawdown {current_drawdown*100:.1f}% >= {max_drawdown_threshold*100:.1f}% threshold")
+            # Close any open position
+            if portfolio.position != 0:
+                portfolio.close_position(price)
+            portfolio.record_state(timestamp, price, signal='circuit_breaker')
+            continue
+
+        # If circuit breaker is active, only record state (no trading)
+        if circuit_breaker_triggered:
+            portfolio.record_state(timestamp, price, signal=None)
+            continue
+
+        # Safety check: prevent negative portfolio value
+        if current_value <= 0:
+            print(f"🚨 CRITICAL: Portfolio value is ${current_value:.2f} - halting trading")
+            portfolio.record_state(timestamp, price, signal='critical_halt')
+            break
+
+        # Determine stop-loss for current position
+        active_stop_loss = stop_loss
+        if portfolio.position_type == 'short' and stop_loss is not None:
+            # Tighter stop-loss for shorts
+            active_stop_loss = stop_loss * short_stop_loss_multiplier
+
         # Check stop loss and take profit
         if portfolio.position != 0:
-            if _check_exit_conditions(portfolio, price, stop_loss, take_profit):
+            if _check_exit_conditions(portfolio, price, active_stop_loss, take_profit):
                 portfolio.close_position(price)
                 portfolio.record_state(timestamp, price, signal='exit_sl_tp')
                 continue
 
-        # Process signals
+        # Process signals with dynamic position sizing
         if row['buy_signal'] and portfolio.position == 0:
-            # Open long position
-            if portfolio.open_long(price, size=position_size):
+            # Open long position with dynamic sizing
+            size = calculate_position_size(portfolio, 'long', long_position_size_pct, short_position_size_pct)
+            if portfolio.open_long(price, size=size):
                 portfolio.record_state(timestamp, price, signal='buy')
             else:
                 portfolio.record_state(timestamp, price, signal=None)
 
         elif row['sell_signal'] and portfolio.position == 0:
-            # Open short position
-            if portfolio.open_short(price, size=position_size):
+            # Open short position with dynamic sizing
+            size = calculate_position_size(portfolio, 'short', long_position_size_pct, short_position_size_pct)
+            if portfolio.open_short(price, size=size, max_size_pct=short_position_size_pct):
                 portfolio.record_state(timestamp, price, signal='sell')
             else:
                 portfolio.record_state(timestamp, price, signal=None)

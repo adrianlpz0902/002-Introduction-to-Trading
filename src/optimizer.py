@@ -10,7 +10,7 @@ import optuna
 from typing import Dict, Optional
 from .indicators import add_all_indicators
 from .signals import create_signals
-from .backtest import run_backtest
+from .backtest_simple import run_backtest
 from .metrics import calculate_all_metrics
 
 
@@ -34,21 +34,25 @@ def objective_function(
     Returns:
         Calmar Ratio (to be maximized)
     """
-    # Suggest hyperparameters
+    # Suggest hyperparameters (conservative ranges to ensure trading activity)
     params = {
-        # Indicator parameters
-        'rsi_period': trial.suggest_int('rsi_period', 10, 20),
-        'rsi_oversold': trial.suggest_int('rsi_oversold', 25, 35),
-        'rsi_overbought': trial.suggest_int('rsi_overbought', 65, 75),
+        # RSI parameters
+        'rsi_period': trial.suggest_int('rsi_period', 10, 30),  # Conservative range to avoid extremes
+        'rsi_oversold': trial.suggest_int('rsi_oversold', 20, 35),  # Avoid extreme lows (< 20)
+        'rsi_overbought': trial.suggest_int('rsi_overbought', 65, 80),  # Avoid unreachable highs (> 80)
+
+        # MACD parameters
         'macd_fast': trial.suggest_int('macd_fast', 8, 15),
         'macd_slow': trial.suggest_int('macd_slow', 20, 30),
         'macd_signal': trial.suggest_int('macd_signal', 7, 11),
+
+        # Bollinger Bands parameters
         'bb_period': trial.suggest_int('bb_period', 15, 25),
         'bb_std': trial.suggest_float('bb_std', 1.5, 2.5),
 
-        # Trading parameters
-        'stop_loss': trial.suggest_float('stop_loss', 0.01, 0.05),
-        'take_profit': trial.suggest_float('take_profit', 0.02, 0.10),
+        # Trading parameters (realistic ranges)
+        'stop_loss': trial.suggest_float('stop_loss', 0.02, 0.08),  # 2%-8% (realistic risk management)
+        'take_profit': trial.suggest_float('take_profit', 0.03, 0.10),  # 3%-10% (achievable targets)
     }
 
     try:
@@ -73,14 +77,19 @@ def objective_function(
             price_col=price_col
         )
 
-        # Run backtest
-        portfolio, history_df = run_backtest(
+        # Run simplified backtest with risk management
+        history_df, portfolio = run_backtest(
             data_with_signals,
             initial_cash=initial_cash,
             transaction_fee=transaction_fee,
             stop_loss=params['stop_loss'],
             take_profit=params['take_profit'],
-            price_col=price_col
+            position_size_pct=0.95,
+            price_col=price_col,
+            max_positions=1,
+            max_position_size_pct=0.30,
+            min_portfolio_pct=0.20,
+            max_drawdown_limit=0.40
         )
 
         # Calculate metrics
@@ -228,13 +237,18 @@ def walk_forward_analysis(
             price_col=price_col
         )
 
-        portfolio, history_df = run_backtest(
+        history_df, portfolio = run_backtest(
             data_with_signals,
             initial_cash=initial_cash,
             transaction_fee=transaction_fee,
             stop_loss=best_params['stop_loss'],
             take_profit=best_params['take_profit'],
-            price_col=price_col
+            position_size_pct=0.95,
+            price_col=price_col,
+            max_positions=1,
+            max_position_size_pct=0.30,
+            min_portfolio_pct=0.20,
+            max_drawdown_limit=0.40
         )
 
         # Calculate test metrics

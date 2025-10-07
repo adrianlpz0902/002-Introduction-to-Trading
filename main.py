@@ -19,7 +19,7 @@ from datetime import datetime
 from src.data_loader import load_and_preprocess_data
 from src.indicators import add_all_indicators
 from src.signals import create_signals
-from src.backtest import run_backtest
+from src.backtest_simple import run_backtest  # Using simplified backtest
 from src.metrics import calculate_all_metrics
 from src.optimizer import optimize_strategy, walk_forward_analysis
 from src.visualization import generate_all_visualizations, create_performance_table
@@ -49,6 +49,23 @@ def run_strategy_pipeline(optimize: bool = True, verbose: bool = True):
     print("TRADING STRATEGY PROJECT 002")
     print("Multi-Indicator Strategy with 2-of-3 Confirmation")
     print("=" * 80)
+
+    # Create timestamped output directories if enabled
+    if OUTPUT_CONFIG.get('use_timestamp', True):
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        base_results_dir = OUTPUT_CONFIG['results_dir']
+        run_dir = os.path.join(base_results_dir, f'run_{timestamp}')
+
+        # Update output paths for this run
+        OUTPUT_CONFIG['figures_dir'] = os.path.join(run_dir, 'figures')
+        OUTPUT_CONFIG['tables_dir'] = os.path.join(run_dir, 'tables')
+        OUTPUT_CONFIG['results_dir'] = run_dir
+
+        print(f"\nResults will be saved to: {run_dir}/")
+    else:
+        print(f"\nResults will be saved to: {OUTPUT_CONFIG['results_dir']}/")
+        print("WARNING: Existing results will be overwritten!")
 
     # ========================================
     # 1. LOAD AND PREPROCESS DATA
@@ -139,15 +156,19 @@ def run_strategy_pipeline(optimize: bool = True, verbose: bool = True):
             price_col=DATA_CONFIG['price_col']
         )
 
-        # Run backtest
-        portfolio, history_df = run_backtest(
+        # Run simplified backtest with risk management
+        history_df, portfolio = run_backtest(
             data_with_signals,
             initial_cash=PORTFOLIO_CONFIG['initial_cash'],
             transaction_fee=PORTFOLIO_CONFIG['transaction_fee'],
             stop_loss=best_params['stop_loss'],
             take_profit=best_params['take_profit'],
-            position_size=PORTFOLIO_CONFIG['position_size'],
-            price_col=DATA_CONFIG['price_col']
+            position_size_pct=PORTFOLIO_CONFIG['position_size'],
+            price_col=DATA_CONFIG['price_col'],
+            max_positions=PORTFOLIO_CONFIG['max_positions'],
+            max_position_size_pct=PORTFOLIO_CONFIG['max_position_size_pct'],
+            min_portfolio_pct=PORTFOLIO_CONFIG['min_portfolio_pct'],
+            max_drawdown_limit=PORTFOLIO_CONFIG['max_drawdown_limit']
         )
 
         # Calculate metrics
@@ -158,6 +179,15 @@ def run_strategy_pipeline(optimize: bool = True, verbose: bool = True):
             periods_per_year=METRICS_CONFIG['periods_per_year']
         )
 
+        # Simple diagnostics
+        print(f"\n  📊 {dataset_name.upper()} RESULTS:")
+        print(f"    Portfolio: ${PORTFOLIO_CONFIG['initial_cash']:.2f} → ${history_df['portfolio_value'].iloc[-1]:.2f}")
+        print(f"    Calmar Ratio: {metrics['calmar_ratio']:.4f}")
+        print(f"    Total Return: {metrics['total_return_pct']:.2f}%")
+        print(f"    Max Drawdown: {metrics['max_drawdown_pct']:.2f}%")
+        print(f"    Total Trades: {metrics['total_trades']}")
+        print(f"    Win Rate: {metrics['win_rate_pct']:.2f}%")
+
         # Store results
         results[dataset_name] = {
             'portfolio': portfolio,
@@ -165,10 +195,6 @@ def run_strategy_pipeline(optimize: bool = True, verbose: bool = True):
             'metrics': metrics,
             'data_with_signals': data_with_signals
         }
-
-        print(f"    Calmar Ratio: {metrics['calmar_ratio']:.4f}")
-        print(f"    Total Return: {metrics['total_return_pct']:.2f}%")
-        print(f"    Total Trades: {metrics['total_trades']}")
 
     # ========================================
     # 5. CALCULATE METRICS

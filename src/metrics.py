@@ -190,40 +190,49 @@ def calculate_win_rate(history_df: pd.DataFrame) -> Dict[str, float]:
     Calculate win rate from trade history.
 
     Args:
-        history_df: Portfolio history DataFrame with signals
+        history_df: Portfolio history DataFrame with num_long/num_short columns
 
     Returns:
         Dictionary with win_rate, total_trades, winning_trades, losing_trades
     """
-    # Identify trade pairs (entry and exit)
+    # Count trades by tracking position changes
     trades = []
+    prev_num_long = 0
+    prev_num_short = 0
     entry_price = None
     entry_type = None
 
     for idx, row in history_df.iterrows():
-        signal = row.get('signal', None)
+        num_long = row.get('num_long', 0)
+        num_short = row.get('num_short', 0)
+        price = row.get('price', row.get('Close', 0))
 
-        if signal in ['buy', 'sell'] and entry_price is None:
-            # Trade entry
-            entry_price = row['price']
-            entry_type = signal
+        # Long entry
+        if num_long > prev_num_long and entry_price is None:
+            entry_price = price
+            entry_type = 'long'
 
-        elif signal and 'close' in str(signal).lower() or signal and 'exit' in str(signal).lower():
-            # Trade exit
-            if entry_price is not None:
-                exit_price = row['price']
+        # Long exit
+        elif num_long < prev_num_long and entry_type == 'long':
+            pnl = (price - entry_price) / entry_price
+            trades.append(pnl)
+            entry_price = None
+            entry_type = None
 
-                # Calculate P&L
-                if entry_type == 'buy':
-                    # Long trade
-                    pnl = (exit_price - entry_price) / entry_price
-                else:
-                    # Short trade
-                    pnl = (entry_price - exit_price) / entry_price
+        # Short entry
+        if num_short > prev_num_short and entry_price is None:
+            entry_price = price
+            entry_type = 'short'
 
-                trades.append(pnl)
-                entry_price = None
-                entry_type = None
+        # Short exit
+        elif num_short < prev_num_short and entry_type == 'short':
+            pnl = (entry_price - price) / entry_price
+            trades.append(pnl)
+            entry_price = None
+            entry_type = None
+
+        prev_num_long = num_long
+        prev_num_short = num_short
 
     if len(trades) == 0:
         return {

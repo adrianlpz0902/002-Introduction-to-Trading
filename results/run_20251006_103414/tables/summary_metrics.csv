@@ -1,0 +1,8 @@
+Metric,Training,Test,Validation
+Calmar Ratio,0.3019,0.1626,0.0919
+Sharpe Ratio,0.5621,0.6361,0.5109
+Sortino Ratio,0.4791,0.5023,0.3901
+Total Return (%),55.12,9.44,5.96
+Max Drawdown (%),31.38,35.29,39.68
+Win Rate (%),77.42,63.64,87.50
+Total Trades,31,11,8
