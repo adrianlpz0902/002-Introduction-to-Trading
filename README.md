@@ -1,5 +1,5 @@
 # Algorithmic Trading Strategy: Multi-Indicator Mean Reversion System
-
+# Luis Adrián López Enríquez
 > Academic Project - Systematic trading strategy optimized to maximize Calmar Ratio using multi-indicator confirmation logic on Bitcoin/USDT hourly data.
 
 ---
@@ -16,8 +16,8 @@
 - [Technologies](#technologies)
 - [Key Findings](#key-findings)
 - [Limitations](#limitations)
-- [Future Work](#future-work)
 - [References](#references)
+- [Acknowledgments](#Acknowledgments)
 
 ---
 
@@ -606,12 +606,6 @@ The project leverages Optuna for Bayesian hyperparameter optimization, pandas fo
 - **Optuna Documentation:** https://optuna.readthedocs.io/
 - **Pandas Time Series:** https://pandas.pydata.org/docs/user_guide/timeseries.html
 
-### Course Materials
-
-- Prof. Luis Felipe Gómez Estrada - Algorithmic Trading Course
-- Lecture notes on backtesting processes and performance metrics
-- Walk-forward analysis methodology
-
 ### Data Source
 
 - **Binance Exchange:** https://www.binance.com/
@@ -624,10 +618,9 @@ The project leverages Optuna for Bayesian hyperparameter optimization, pandas fo
 This project was developed as part of an academic course on algorithmic trading and quantitative finance. Special thanks to:
 
 - **Prof. Luis Felipe Gómez Estrada** - Course instructor and guidance
-- **Anthropic Claude** - Development assistance and code review
+- **Claude** - Development assistance and code review
 - **Binance** - Historical market data provision
 - **Open-source community** - Technical analysis libraries and tools
 
 ---
 
-**Note:** This trading strategy is for educational and academic purposes only. Past performance does not guarantee future results.
