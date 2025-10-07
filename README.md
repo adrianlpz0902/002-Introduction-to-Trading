@@ -1,4 +1,4 @@
-# Algorithmic Trading Strategy: Multi-Indicator Mean Reversion System
+# 002 Introduction to trading
 # Luis Adrián López Enríquez
 > Academic Project - Systematic trading strategy optimized to maximize Calmar Ratio using multi-indicator confirmation logic on Bitcoin/USDT hourly data.
 
