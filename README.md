@@ -17,6 +17,7 @@
 - [Key Findings](#key-findings)
 - [Limitations](#limitations)
 - [References](#references)
+- [Acknowledgments](#Acknowledgments)
 
 ---
 
